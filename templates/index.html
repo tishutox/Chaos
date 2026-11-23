@@ -6,14 +6,47 @@
     <meta name="theme-color" content="#f5f4f0">
     <title>Asset Generator</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='toolbar.js') }}" defer></script>
   </head>
   <body>
+    {% macro icon(name) -%}
+      <span class="icon" aria-hidden="true" style="--icon-url: url('{{ url_for('static', filename='svg/' ~ name ~ '.svg') }}')"></span>
+    {%- endmacro %}
     <header class="topbar">
-      <a class="brand" href="/" aria-label="Asset Generator Startseite">
-        <span class="brand-mark" aria-hidden="true">A</span>
-        <span>Asset Generator</span>
+      <a class="home-button" href="{{ url_for('home') }}" aria-label="Neuer Arbeitsbereich" title="Neuer Arbeitsbereich">
+        {{ icon('house') }}
       </a>
-      <span class="project-label">UNIPROJEKT</span>
+      <button class="icon-button mobile-toggle" type="button" aria-label="Menü öffnen" aria-expanded="false" aria-controls="toolbar">
+        {{ icon('equal') }}
+      </button>
+      <nav class="toolbar" id="toolbar" aria-label="Arbeitsbereich-Werkzeuge">
+        <div class="toolbar-group toolbar-tools">
+          <button class="icon-button" type="button" disabled aria-label="2D-Generator (noch nicht verfügbar)" title="2D-Generator – noch nicht verfügbar">{{ icon('palette') }}<span>2D-Generator</span></button>
+          <button class="icon-button" type="button" disabled aria-label="3D-Konverter (noch nicht verfügbar)" title="3D-Konverter – noch nicht verfügbar">{{ icon('box') }}<span>3D-Konverter</span></button>
+          <button class="icon-button" type="button" disabled aria-label="Asset-Verlauf (noch nicht verfügbar)" title="Asset-Verlauf – noch nicht verfügbar">{{ icon('tool-case') }}<span>Asset-Verlauf</span></button>
+        </div>
+        <div class="toolbar-group toolbar-actions">
+          <button class="icon-button" type="button" disabled aria-label="2D-Bild hochladen (noch nicht verfügbar)" title="2D-Bild hochladen – noch nicht verfügbar">{{ icon('upload') }}<span>Bild hochladen</span></button>
+          <button class="icon-button" type="button" disabled aria-label="Pipeline-Status (noch nicht verfügbar)" title="Pipeline-Status – noch nicht verfügbar"><span class="icon loader-icon" aria-hidden="true"></span><span>Pipeline-Status</span></button>
+        </div>
+        <div class="toolbar-group toolbar-end">
+          <button class="icon-button" type="button" disabled aria-label="Rückgängig (noch nicht verfügbar)" title="Rückgängig – noch nicht verfügbar">{{ icon('undo-2') }}<span>Rückgängig</span></button>
+          <button class="icon-button" type="button" disabled aria-label="Wiederholen (noch nicht verfügbar)" title="Wiederholen – noch nicht verfügbar">{{ icon('redo-2') }}<span>Wiederholen</span></button>
+          <div class="export">
+            <button class="export-button" type="button" aria-expanded="false" aria-controls="export-menu">
+              Export {{ icon('chevron-down') }}
+            </button>
+            <div class="export-menu" id="export-menu" hidden>
+              <p>Assets exportieren</p>
+              <button type="button" disabled>2D-Bild <span>PNG</span></button>
+              <button type="button" disabled>3D-Modell <span>GLB</span></button>
+              <button type="button" disabled>3D-Modell <span>OBJ</span></button>
+              <small>Export noch nicht verfügbar</small>
+            </div>
+          </div>
+          <button class="icon-button" type="button" disabled aria-label="Einstellungen (noch nicht verfügbar)" title="Einstellungen – noch nicht verfügbar">{{ icon('settings') }}<span>Einstellungen</span></button>
+        </div>
+      </nav>
     </header>
 
     <main>
