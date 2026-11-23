@@ -33,6 +33,7 @@ body {
   align-items: center;
   gap: 12px;
   border-bottom: 1px solid #e8e6e0;
+  border-radius: 0 0 14px 14px;
   background: #fffefa;
 }
 
@@ -120,6 +121,26 @@ button {
   cursor: pointer;
 }
 
+.mobile-toggle .icon {
+  grid-area: 1 / 1;
+  transition: opacity 200ms ease, transform 200ms ease;
+}
+
+.mobile-toggle .menu-close {
+  opacity: 0;
+  transform: rotate(-90deg);
+}
+
+.mobile-toggle[aria-expanded="true"] .menu-equal {
+  opacity: 0;
+  transform: rotate(90deg);
+}
+
+.mobile-toggle[aria-expanded="true"] .menu-close {
+  opacity: 1;
+  transform: rotate(0);
+}
+
 .export {
   position: relative;
   margin: 0 4px;
@@ -143,6 +164,11 @@ button {
 .export-button .icon {
   width: 16px;
   height: 16px;
+  transition: transform 200ms ease;
+}
+
+.export-button[aria-expanded="true"] .icon {
+  transform: rotate(180deg);
 }
 
 .home-button:hover,
@@ -303,7 +329,8 @@ footer {
   }
 
   .mobile-toggle {
-    display: inline-flex;
+    display: grid;
+    place-items: center;
   }
 
   .toolbar {
@@ -314,6 +341,7 @@ footer {
     display: none;
     padding: 8px 16px 16px;
     border-bottom: 1px solid #e8e6e0;
+    border-radius: 0 0 14px 14px;
     background: #fffefa;
     box-shadow: 0 12px 20px rgb(36 35 31 / 8%);
   }
@@ -371,6 +399,13 @@ footer {
     box-shadow: none;
   }
 
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mobile-toggle .icon,
+  .export-button .icon {
+    transition: none;
+  }
 }
 
 @media (max-width: 560px) {

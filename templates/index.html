@@ -17,7 +17,8 @@
         {{ icon('house') }}
       </a>
       <button class="icon-button mobile-toggle" type="button" aria-label="Menü öffnen" aria-expanded="false" aria-controls="toolbar">
-        {{ icon('equal') }}
+        <span class="icon menu-equal" aria-hidden="true" style="--icon-url: url('{{ url_for('static', filename='svg/equal.svg') }}')"></span>
+        <span class="icon menu-close" aria-hidden="true" style="--icon-url: url('{{ url_for('static', filename='svg/x.svg') }}')"></span>
       </button>
       <nav class="toolbar" id="toolbar" aria-label="Arbeitsbereich-Werkzeuge">
         <div class="toolbar-group toolbar-tools">
