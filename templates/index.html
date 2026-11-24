@@ -41,11 +41,12 @@
               <p>Assets exportieren</p>
               <button type="button" disabled>2D-Bild <span>PNG</span></button>
               <button type="button" disabled>3D-Modell <span>GLB</span></button>
+              <button type="button" disabled>3D-Modell <span>FBX</span></button>
               <button type="button" disabled>3D-Modell <span>OBJ</span></button>
               <small>Export noch nicht verfügbar</small>
             </div>
           </div>
-          <button class="icon-button" type="button" disabled aria-label="Einstellungen (noch nicht verfügbar)" title="Einstellungen – noch nicht verfügbar">{{ icon('settings') }}<span>Einstellungen</span></button>
+          <a class="icon-button" href="{{ url_for('settings') }}" aria-label="Einstellungen" title="Einstellungen">{{ icon('settings') }}<span>Einstellungen</span></a>
         </div>
       </nav>
     </header>

@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f5f4f0">
+    <title>Einstellungen · Asset Generator</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='settings.js') }}" defer></script>
+  </head>
+  <body>
+    <header class="topbar settings-topbar">
+      <a class="home-button" href="{{ url_for('home') }}" aria-label="Zurück zum Arbeitsbereich" title="Zurück zum Arbeitsbereich">
+        <span class="icon" aria-hidden="true" style="--icon-url: url('{{ url_for('static', filename='svg/house.svg') }}')"></span>
+      </a>
+      <span class="settings-topbar-title">Einstellungen</span>
+      <a class="back-link" href="{{ url_for('home') }}">Zurück zum Arbeitsbereich</a>
+    </header>
+
+    <main class="settings-page">
+      <div class="settings-heading">
+        <p class="eyebrow">ASSET GENERATOR</p>
+        <h1>Einstellungen<span>.</span></h1>
+        <p class="intro">Konfiguriere deine Verbindung und die Standardwerte für deinen Workspace.</p>
+      </div>
+
+      <form id="settings-form">
+        <section class="settings-card" aria-labelledby="connection-title">
+          <div class="section-heading"><span class="section-number">01</span><div><h2 id="connection-title">API &amp; Backend</h2><p>Verbinde deinen Workspace mit der KI-Pipeline.</p></div></div>
+          <div class="fields">
+            <label for="backend-url">Backend-URL <span>Adresse des Pipeline-Servers</span></label>
+            <input id="backend-url" name="backendUrl" type="url" placeholder="http://localhost:8000" autocomplete="url">
+            <label for="api-key">API-Key <span>Optionaler Schlüssel für externe Dienste</span></label>
+            <input id="api-key" name="apiKey" type="password" autocomplete="off" placeholder="API-Key eingeben">
+            <p class="field-note">Der Schlüssel wird unverschlüsselt im lokalen Browser-Speicher abgelegt und nicht im Backup gespeichert. Nur auf vertrauenswürdigen Geräten verwenden.</p>
+            <div class="connection-actions">
+              <button class="secondary-button" id="test-connection" type="button">Verbindung testen</button>
+              <span class="connection-status" id="connection-status" role="status" aria-live="polite">Nicht getestet</span>
+            </div>
+            <p class="field-note">Der Server muss <code>/health</code> und browserseitige CORS-Anfragen unterstützen.</p>
+          </div>
+        </section>
+
+        <section class="settings-card" aria-labelledby="generation-title">
+          <div class="section-heading"><span class="section-number">02</span><div><h2 id="generation-title">2D-Generierung</h2><p>Standardwerte für neue 2D-Assets.</p></div></div>
+          <div class="fields">
+            <label for="image-resolution">Bildauflösung</label>
+            <select id="image-resolution" name="imageResolution">
+              <option value="512">512 × 512 · Schnell</option>
+              <option value="1024">1024 × 1024 · Detailreich</option>
+            </select>
+            <label class="toggle-row" for="auto-background"><span>Auto-Freistellen <small>Hintergrund automatisch entfernen</small></span><input id="auto-background" name="autoBackground" type="checkbox" role="switch"></label>
+            <label for="base-prompt">Basis-Prompt <span>Zusatz für konsistente Assets</span></label>
+            <textarea id="base-prompt" name="basePrompt" rows="3"></textarea>
+            <label for="negative-prompt">Negativ-Prompt <span>Unerwünschte Bildeigenschaften</span></label>
+            <textarea id="negative-prompt" name="negativePrompt" rows="3"></textarea>
+          </div>
+        </section>
+
+        <section class="settings-card" aria-labelledby="conversion-title">
+          <div class="section-heading"><span class="section-number">03</span><div><h2 id="conversion-title">3D-Konvertierung &amp; Export</h2><p>Vorgaben für Meshes und Texturen.</p></div></div>
+          <div class="fields">
+            <label for="polycount">Ziel-Polycount</label>
+            <select id="polycount" name="polycount">
+              <option value="5000">Low · ca. 5.000 Tris</option>
+              <option value="15000">Medium · ca. 15.000 Tris</option>
+              <option value="30000">High · ca. 30.000 Tris</option>
+            </select>
+            <label for="texture-resolution">Textur-Auflösung</label>
+            <select id="texture-resolution" name="textureResolution">
+              <option value="1024">1024 × 1024 · 1K</option>
+              <option value="2048">2048 × 2048 · 2K</option>
+            </select>
+            <label class="toggle-row" for="pbr-maps"><span>PBR-Maps generieren <small>Normal- und Roughness-Maps hinzufügen</small></span><input id="pbr-maps" name="pbrMaps" type="checkbox" role="switch"></label>
+            <label for="export-format">Export-Format</label>
+            <select id="export-format" name="exportFormat">
+              <option value="glb">.glb · Web-Vorschau</option>
+              <option value="fbx">.fbx · Unity / Unreal</option>
+              <option value="obj">.obj · Blender</option>
+            </select>
+          </div>
+        </section>
+
+        <div class="save-row"><p id="save-status" role="status" aria-live="polite"></p><button class="primary-button" type="submit">Einstellungen speichern</button></div>
+      </form>
+
+      <section class="settings-card" aria-labelledby="workspace-title">
+        <div class="section-heading"><span class="section-number">04</span><div><h2 id="workspace-title">Lokale Daten &amp; Workspace</h2><p>Deine Daten bleiben in diesem Browser.</p></div></div>
+        <div class="fields">
+          <label for="storage-usage">Browser-Speicher <span id="storage-text">Wird ermittelt …</span></label>
+          <progress id="storage-usage" max="100" value="0" aria-describedby="storage-note"></progress>
+          <p class="field-note" id="storage-note">Schätzung für die gesamte Website, nicht nur für Assets.</p>
+          <div class="workspace-actions">
+            <button class="secondary-button" id="export-workspace" type="button">Workspace exportieren</button>
+            <button class="secondary-button" id="import-workspace" type="button">Workspace importieren</button>
+            <input id="backup-file" type="file" accept=".json,application/json" hidden>
+            <button class="danger-button" id="clear-assets" type="button">Lokale Assets löschen</button>
+          </div>
+          <p class="field-note">Das Backup enthält gespeicherte Einstellungen und Assets, aber keinen API-Key. Löschen entfernt nur den Asset-Verlauf; Einstellungen bleiben erhalten. Die Asset-Generierung ist noch nicht angebunden.</p>
+          <p id="workspace-status" class="action-status" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+    </main>
+    <footer>Ein Uniprojekt · Asset Generator</footer>
+  </body>
+</html>
