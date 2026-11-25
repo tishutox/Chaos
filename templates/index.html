@@ -3,10 +3,11 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#fbfaf6">
+    <meta name="theme-color" content="#171a21">
     <title>Asset Generator</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="{{ url_for('static', filename='toolbar.js') }}" defer></script>
+    <script src="{{ url_for('static', filename='generator.js') }}" defer></script>
   </head>
   <body>
     {% macro icon(name) -%}
@@ -22,7 +23,7 @@
       </button>
       <nav class="toolbar" id="toolbar" aria-label="Arbeitsbereich-Werkzeuge">
         <div class="toolbar-group toolbar-tools">
-          <button class="icon-button" type="button" disabled aria-label="2D-Generator (noch nicht verfügbar)" title="2D-Generator – noch nicht verfügbar">{{ icon('palette') }}<span>2D-Generator</span></button>
+          <a class="icon-button" href="#generator" aria-label="2D-Generator" title="2D-Generator">{{ icon('palette') }}<span>2D-Generator</span></a>
           <button class="icon-button" type="button" disabled aria-label="3D-Konverter (noch nicht verfügbar)" title="3D-Konverter – noch nicht verfügbar">{{ icon('box') }}<span>3D-Konverter</span></button>
           <button class="icon-button" type="button" disabled aria-label="Asset-Verlauf (noch nicht verfügbar)" title="Asset-Verlauf – noch nicht verfügbar">{{ icon('tool-case') }}<span>Asset-Verlauf</span></button>
         </div>
@@ -55,15 +56,25 @@
       <section class="welcome" aria-labelledby="page-title">
         <p class="eyebrow">EURE KREATIVE WERKSTATT</p>
         <h1 id="page-title">Ideen werden <span>Assets.</span></h1>
-        <p class="intro">Der Arbeitsbereich für euer Projekt nimmt Form an.</p>
+        <p class="intro">Beschreibe deine Idee und erstelle ein Pixel-Art-Asset.</p>
       </section>
 
-      <section class="workspace" aria-label="Arbeitsbereich">
-        <div class="workspace-icon" aria-hidden="true">
-          <span></span><span></span><span></span><span></span>
+      <section class="workspace" id="generator" aria-label="2D-Generator">
+        <div class="generator-heading"><span class="viewport-dot"></span> 2D ASSET VIEWPORT</div>
+        <div class="generator-grid">
+          <form id="generator-form">
+            <label for="asset-prompt">Deine Asset-Idee</label>
+            <textarea id="asset-prompt" maxlength="2000" rows="4" required placeholder="Zum Beispiel: ein magisches Schwert"></textarea>
+            <p class="field-note">Ollama optimiert deinen Prompt, ComfyUI erstellt das PNG.</p>
+            <button class="generate-button" type="submit">Asset generieren</button>
+            <p id="generator-status" role="status" aria-live="polite"></p>
+          </form>
+          <div class="preview" aria-label="Asset-Vorschau">
+            <p id="preview-placeholder">Dein Asset erscheint hier.</p>
+            <img id="asset-preview" alt="Generiertes Pixel-Art-Asset" hidden>
+            <a id="download-asset" download="asset.png" hidden>PNG herunterladen</a>
+          </div>
         </div>
-        <p class="workspace-title">Euer Arbeitsbereich</p>
-        <p class="workspace-copy">Hier ist Platz für das, was ihr gemeinsam entwickelt.</p>
       </section>
     </main>
 

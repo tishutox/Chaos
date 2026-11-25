@@ -719,6 +719,187 @@ footer {
     font-size: 0;
   }
 
+  /* Dark editor palette shared by the workspace and settings. */
+  :root {
+    color-scheme: dark;
+    --accent: #55aaff;
+    --accent-soft: #78b9fa;
+    --panel: #222630;
+    --panel-solid: #292e39;
+    --line: #3a404d;
+    color: #e5e9f0;
+    background: #171a21;
+  }
+
+  body {
+    background: #171a21;
+  }
+
+  body::before {
+    background-image: linear-gradient(#ffffff08 1px, transparent 1px), linear-gradient(90deg, #ffffff08 1px, transparent 1px);
+    background-size: 32px 32px;
+    opacity: .6;
+  }
+
+  .topbar, .toolbar.is-open {
+    background: #20242c;
+    box-shadow: 0 1px 0 #111318;
+  }
+
+  .home-button, .export-button, .generate-button {
+    color: #fff;
+    background: #2867a7;
+    border-color: #347bc0;
+  }
+
+  .home-button:hover, .export-button:hover, .generate-button:hover:not(:disabled) {
+    background: #347bc0;
+  }
+
+  .icon-button:not(:disabled):hover, .mobile-toggle:hover {
+    background: #37414f;
+  }
+
+  .icon-button:disabled, .export-menu button, .export-menu small {
+    color: #858e9d;
+  }
+
+  .intro, .workspace-copy, footer, .back-link, .section-heading p,
+  .fields label span:not(.icon), .toggle-row small, .field-note {
+    color: #aeb8c7;
+  }
+
+  h1 span {
+    text-shadow: 0 5px 24px #55aaff30;
+  }
+
+  .workspace, .settings-card {
+    border-color: var(--line);
+    background: var(--panel);
+    box-shadow: 0 18px 50px #00000030;
+  }
+
+  .workspace {
+    display: block;
+    padding: 0;
+    overflow: hidden;
+    text-align: left;
+  }
+
+  .generator-heading {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--line);
+    color: #aeb8c7;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .1em;
+  }
+
+  .viewport-dot {
+    display: inline-block;
+    width: 7px;
+    height: 7px;
+    margin-right: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+  }
+
+  .generator-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 24px;
+    padding: 24px;
+  }
+
+  #generator-form label {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+
+  #generator-form textarea, .fields input:not([type="checkbox"]), .fields select, .fields textarea {
+    width: 100%;
+    padding: 10px 12px;
+    border: 1px solid #48505f;
+    border-radius: 8px;
+    color: #e5e9f0;
+    background: #171b22;
+    font: inherit;
+    font-size: 14px;
+  }
+
+  #generator-form textarea { resize: vertical; }
+  #generator-form .field-note { margin: 8px 0 16px; }
+  #generator-form textarea:focus-visible, .generate-button:focus-visible, #download-asset:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 2px;
+  }
+
+  .generate-button {
+    min-height: 40px;
+    padding: 9px 16px;
+    border-style: solid;
+    border-width: 1px;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  .generate-button:disabled { opacity: .6; cursor: wait; }
+  #generator-status { color: #9ec9f3; font-size: 12px; line-height: 1.5; }
+
+  .preview {
+    min-height: 240px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    padding: 16px;
+    border: 1px solid #48505f;
+    border-radius: 8px;
+    background-color: #1a1e25;
+    background-image: linear-gradient(45deg, #ffffff08 25%, transparent 25%, transparent 75%, #ffffff08 75%), linear-gradient(45deg, #ffffff08 25%, transparent 25%, transparent 75%, #ffffff08 75%);
+    background-position: 0 0, 12px 12px;
+    background-size: 24px 24px;
+    color: #aeb8c7;
+    font-size: 13px;
+  }
+
+  .preview img {
+    max-width: 100%;
+    max-height: 320px;
+    image-rendering: pixelated;
+  }
+
+  .preview [hidden] { display: none; }
+  #download-asset { color: #9ed0ff; font-weight: 700; }
+
+  .settings-page button {
+    border-color: #48505f;
+    color: #e5e9f0;
+    background: #303642;
+  }
+
+  .settings-page button:hover:not(:disabled) { background: #414b5b; }
+  .settings-page .primary-button, .settings-page .danger-button {
+    border-color: #347bc0;
+    background: #2867a7;
+  }
+  .settings-page :is(.primary-button, .danger-button):hover:not(:disabled) { background: #347bc0; }
+  .toggle-row input { background: #555e6d; }
+  .connection-status { color: #c2ccd9; background: #343c49; }
+  .connection-status.is-connected { color: #a8e7bf; background: #244635; }
+  .save-row p, .action-status { color: #a8e7bf; }
+  .is-error { color: #ff9aa9 !important; }
+  .connection-status.is-error { background: #522d39; }
+
+  @media (max-width: 700px) {
+    .toolbar { background: #20242c; }
+    .generator-grid { grid-template-columns: 1fr; }
+  }
+
   .back-link::after {
     content: "Zurück";
     font-size: 12px;

@@ -213,8 +213,7 @@ document.querySelector("#test-connection").addEventListener("click", async (even
   connectionStatus.classList.remove("is-connected");
   try {
     const backendUrl = readForm().backendUrl;
-    if (!backendUrl) throw new Error("Bitte eine Backend-URL eingeben.");
-    const url = `${backendUrl.replace(/\/+$/, "")}/health`;
+    const url = `${(backendUrl || "http://localhost:8000").replace(/\/+$/, "")}/health`;
     const response = await fetch(url, { signal: controller.signal, credentials: "omit", cache: "no-store" });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     if (connectionController !== controller) return;

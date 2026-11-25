@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#fbfaf6">
+    <meta name="theme-color" content="#171a21">
     <title>Einstellungen · Asset Generator</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
     <script src="{{ url_for('static', filename='settings.js') }}" defer></script>
@@ -37,12 +37,12 @@
               <button class="secondary-button" id="test-connection" type="button">Verbindung testen</button>
               <span class="connection-status" id="connection-status" role="status" aria-live="polite">Nicht getestet</span>
             </div>
-            <p class="field-note">Der Server muss <code>/health</code> und browserseitige CORS-Anfragen unterstützen.</p>
+            <p class="field-note">Leer verwendet http://localhost:8000. Der Verbindungstest prüft nur das Backend, nicht Ollama oder ComfyUI. Der API-Key wird für die lokale Pipeline nicht verwendet.</p>
           </div>
         </section>
 
         <section class="settings-card" aria-labelledby="generation-title">
-          <div class="section-heading"><span class="section-number">02</span><div><h2 id="generation-title">2D-Generierung</h2><p>Standardwerte für neue 2D-Assets.</p></div></div>
+          <div class="section-heading"><span class="section-number">02</span><div><h2 id="generation-title">2D-Generierung</h2><p>Der Basis-Prompt wird verwendet. Auflösung, Freistellen und Negativ-Prompt werden derzeit im ComfyUI-Workflow eingestellt.</p></div></div>
           <div class="fields">
             <label for="image-resolution">Bildauflösung</label>
             <select id="image-resolution" name="imageResolution">
@@ -96,7 +96,7 @@
             <input id="backup-file" type="file" accept=".json,application/json" hidden>
             <button class="danger-button" id="clear-assets" type="button">Lokale Assets löschen</button>
           </div>
-          <p class="field-note">Das Backup enthält gespeicherte Einstellungen und Assets, aber keinen API-Key. Löschen entfernt nur den Asset-Verlauf; Einstellungen bleiben erhalten. Die Asset-Generierung ist noch nicht angebunden.</p>
+          <p class="field-note">Das Backup enthält gespeicherte Einstellungen und Assets, aber keinen API-Key. Löschen entfernt nur die gespeicherten Assets; Einstellungen bleiben erhalten.</p>
           <p id="workspace-status" class="action-status" role="status" aria-live="polite"></p>
         </div>
       </section>
