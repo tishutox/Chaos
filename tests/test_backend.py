@@ -70,9 +70,39 @@ class PipelineTests(unittest.TestCase):
         self.assertEqual(self.queued_workflow["9"]["class_type"], "SaveImage")
 
     def test_missing_workflow_configuration_is_explicit(self):
-        with patch.dict(os.environ, {"COMFY_PROMPT_NODE_ID": ""}):
+        with patch.dict(os.environ, {"COMFY_WORKFLOW": os.path.join(self.directory.name, "missing.json")}):
             response = self.client.post("/generate", json={"prompt": "sword"})
         self.assertEqual(response.status_code, 503)
+        self.assertIn("workflow_api.json", response.json()["detail"])
+
+    def test_nodes_are_detected_without_configuration(self):
+        workflow = {
+            "3": {"class_type": "KSampler", "inputs": {"positive": ["6", 0], "negative": ["7", 0]}},
+            "6": {"class_type": "CLIPTextEncode", "inputs": {"text": "pos"}},
+            "7": {"class_type": "CLIPTextEncode", "inputs": {"text": "neg"}},
+            "9": {"class_type": "SaveImage", "inputs": {}},
+        }
+        self.assertEqual(backend.detect_prompt_node(workflow), "6")
+        self.assertEqual(backend.detect_output_node(workflow), "9")
+
+    def test_status_reports_unreachable_services(self):
+        def handler(request):
+            raise httpx.ConnectError("offline", request=request)
+        original_client = httpx.AsyncClient
+        transport = httpx.MockTransport(handler)
+        with patch.object(backend.httpx, "AsyncClient", side_effect=lambda **kwargs: original_client(transport=transport, **kwargs)):
+            data = self.client.get("/status").json()
+        self.assertEqual(data, {"backend": True, "ollama": False, "comfyui": False, "workflow": True})
+
+    def test_private_network_preflight_is_allowed(self):
+        response = self.client.options("/generate", headers={
+            "Origin": backend.RENDER_ORIGIN,
+            "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type",
+            "Access-Control-Request-Private-Network": "true",
+        })
+        self.assertEqual(response.headers["access-control-allow-origin"], backend.RENDER_ORIGIN)
+        self.assertEqual(response.headers["access-control-allow-private-network"], "true")
 
     def test_blank_prompt_is_rejected(self):
         response = self.client.post("/generate", json={"prompt": "  "})

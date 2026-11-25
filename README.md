@@ -15,15 +15,15 @@ ollama pull llama3.2
 
 Ollama auf `127.0.0.1:11434` und ComfyUI auf `127.0.0.1:8188` starten. Erstellt in ComfyUI einen Workflow mit einem **positiven CLIPTextEncode**, Bildgenerierung, Hintergrundentfernung, Nearest-Neighbor-Resize (z. B. 64 × 64 oder 128 × 128) und einem **SaveImage**-Ausgabe-Node. Ein Pixel-Art-Modell bzw. LoRA und ein passender Background-Removal-Node müssen separat installiert werden. Prüft den Workflow zuerst in ComfyUI und exportiert ihn über **Save (API Format)** als `workflow_api.json` im Projektverzeichnis. Dieser installationsspezifische Workflow wird nicht mitgeliefert oder in Git gespeichert.
 
-Ermittelt im exportierten JSON die numerischen Schlüssel des positiven CLIPTextEncode- und des SaveImage-Nodes. In einem Terminal:
+Das Backend erkennt den positiven CLIPTextEncode-Node (über den KSampler) und den SaveImage-Node automatisch. Nur falls das nicht passt, setzt `COMFY_PROMPT_NODE_ID` und `COMFY_OUTPUT_NODE_ID`. Backend starten:
 
 ```powershell
-$env:COMFY_PROMPT_NODE_ID = "6"  # durch eure Node-ID ersetzen
-$env:COMFY_OUTPUT_NODE_ID = "9"  # durch eure Node-ID ersetzen
-python -m uvicorn backend:app --host 127.0.0.1 --port 8000
+.\start.ps1
 ```
 
-In einem zweiten Terminal:
+`http://127.0.0.1:8000/status` zeigt, ob Ollama, ComfyUI und der Workflow erreichbar sind.
+
+Für die lokale Webseite in einem zweiten Terminal:
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
@@ -40,9 +40,9 @@ Optionale Umgebungsvariablen für FastAPI:
 | `OLLAMA_MODEL` | `llama3.2` | Installiertes Ollama-Modell |
 | `COMFY_URL` | `http://127.0.0.1:8188` | ComfyUI-Server |
 | `COMFY_WORKFLOW` | `workflow_api.json` | Pfad zum exportierten Workflow |
-| `COMFY_PROMPT_NODE_ID` | – | ID des positiven CLIPTextEncode-Nodes |
-| `COMFY_OUTPUT_NODE_ID` | – | ID des SaveImage-Nodes |
-| `UI_ORIGINS` | `http://localhost:5000,http://127.0.0.1:5000` | Kommagetrennte erlaubte Browser-Origins |
+| `COMFY_PROMPT_NODE_ID` | automatisch | ID des positiven CLIPTextEncode-Nodes |
+| `COMFY_OUTPUT_NODE_ID` | automatisch | ID des SaveImage-Nodes |
+| `UI_ORIGINS` | lokal (Port 5000) und `https://chaos-pt2r.onrender.com` | Kommagetrennte erlaubte Browser-Origins |
 
 Der Dienst ist für eine vertrauenswürdige lokale Umgebung vorgesehen und hat keine Authentifizierung. Nicht öffentlich oder auf allen Netzwerkinterfaces bereitstellen. Die CORS-Liste ist kein Ersatz für Zugriffsschutz. `/health` prüft nur, ob FastAPI erreichbar ist; die Generierung meldet Verbindungs- und Workflow-Fehler separat.
 
@@ -54,4 +54,4 @@ Die Workspace-Verwaltung verwendet IndexedDB `asset-generator`, Store `assets`, 
 
 ## Deployment
 
-Die Flask-Oberfläche kann weiterhin z. B. mit `gunicorn main:app --bind 0.0.0.0:$PORT` auf Render laufen. Die lokale Pipeline ist dort nicht automatisch verfügbar; Browser blockieren insbesondere Zugriffe einer HTTPS-Seite auf ein HTTP-Backend (Mixed Content). Für den beschriebenen lokalen Betrieb beide Dienste wie oben starten.
+Die Flask-Oberfläche läuft z. B. mit `gunicorn main:app --bind 0.0.0.0:$PORT` auf Render. Die Pipeline läuft immer auf dem eigenen Rechner. Die Render-Seite ruft `http://localhost:8000` im Browser des Nutzers auf, daher muss auf dem jeweiligen Rechner `.\start.ps1` laufen. Das Backend erlaubt dafür die Render-Origin und antwortet auf Private-Network-Preflights. Chrome/Edge fragen ggf. nach der Erlaubnis für den Zugriff auf lokale Geräte; diese bestätigen. Firefox oder Browser-Erweiterungen (Adblocker, Tracking-Schutz) können localhost-Anfragen blockieren. Dann die Seite lokal unter http://127.0.0.1:5000 verwenden.

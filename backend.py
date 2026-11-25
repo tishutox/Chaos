@@ -14,15 +14,25 @@ from fastapi.responses import Response
 from PIL import Image, UnidentifiedImageError
 from pydantic import BaseModel, Field
 
+RENDER_ORIGIN = "https://chaos-pt2r.onrender.com"
+
 app = FastAPI(title="Asset Generator Pipeline")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=os.getenv(
-        "UI_ORIGINS", "http://localhost:5000,http://127.0.0.1:5000"
+        "UI_ORIGINS", f"http://localhost:5000,http://127.0.0.1:5000,{RENDER_ORIGIN}"
     ).split(","),
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
+
+
+@app.middleware("http")
+async def allow_private_network(request, call_next):
+    response = await call_next(request)
+    if request.headers.get("access-control-request-private-network") == "true":
+        response.headers["Access-Control-Allow-Private-Network"] = "true"
+    return response
 
 SYSTEM_PROMPT = (
     "Convert the user's idea into concise English tags for a single isolated "
@@ -39,14 +49,16 @@ class GenerateRequest(BaseModel):
 
 def load_workflow():
     path = Path(os.getenv("COMFY_WORKFLOW", "workflow_api.json"))
-    node_id = os.getenv("COMFY_PROMPT_NODE_ID", "")
-    output_id = os.getenv("COMFY_OUTPUT_NODE_ID", "")
     try:
         workflow = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError) as exc:
-        raise HTTPException(503, f"ComfyUI-Workflow kann nicht geladen werden: {exc}") from exc
-    if not isinstance(workflow, dict) or not node_id or not output_id:
-        raise HTTPException(503, "Workflow und COMFY_PROMPT_NODE_ID/COMFY_OUTPUT_NODE_ID konfigurieren.")
+        raise HTTPException(503, f"workflow_api.json fehlt oder ist ungültig ({path}): {exc}") from exc
+    if not isinstance(workflow, dict):
+        raise HTTPException(503, "Der Workflow muss im ComfyUI-API-Format vorliegen.")
+    node_id = os.getenv("COMFY_PROMPT_NODE_ID") or detect_prompt_node(workflow)
+    output_id = os.getenv("COMFY_OUTPUT_NODE_ID") or detect_output_node(workflow)
+    if not node_id or not output_id:
+        raise HTTPException(503, "Prompt- oder Ausgabe-Node nicht gefunden. Workflow prüfen oder COMFY_PROMPT_NODE_ID/COMFY_OUTPUT_NODE_ID setzen.")
     node = workflow.get(node_id)
     if not isinstance(node, dict) or node.get("class_type") != "CLIPTextEncode" or not isinstance(node.get("inputs"), dict) or not isinstance(node["inputs"].get("text"), str):
         raise HTTPException(503, "Der konfigurierte Prompt-Node muss ein CLIPTextEncode-Node mit Text sein.")
@@ -55,9 +67,49 @@ def load_workflow():
     return workflow, node_id, output_id
 
 
+def detect_output_node(workflow):
+    return next((key for key, node in workflow.items()
+                 if isinstance(node, dict) and node.get("class_type") == "SaveImage"), None)
+
+
+def detect_prompt_node(workflow):
+    """Prefer the CLIPTextEncode feeding a sampler's positive input."""
+    for node in workflow.values():
+        if isinstance(node, dict) and str(node.get("class_type", "")).startswith("KSampler"):
+            link = node.get("inputs", {}).get("positive")
+            if isinstance(link, list) and link:
+                target = workflow.get(str(link[0]))
+                if isinstance(target, dict) and target.get("class_type") == "CLIPTextEncode":
+                    return str(link[0])
+    return next((key for key, node in workflow.items()
+                 if isinstance(node, dict) and node.get("class_type") == "CLIPTextEncode"), None)
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
+
+
+@app.get("/status")
+async def status():
+    """Report which of the local services are reachable."""
+    targets = {
+        "ollama": os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/") + "/api/tags",
+        "comfyui": os.getenv("COMFY_URL", "http://127.0.0.1:8188").rstrip("/") + "/system_stats",
+    }
+    result = {"backend": True}
+    async with httpx.AsyncClient(timeout=3.0) as client:
+        for name, url in targets.items():
+            try:
+                result[name] = (await client.get(url)).is_success
+            except httpx.RequestError:
+                result[name] = False
+    try:
+        load_workflow()
+        result["workflow"] = True
+    except HTTPException:
+        result["workflow"] = False
+    return result
 
 
 @app.post("/generate")
