@@ -108,12 +108,21 @@ class PipelineTests(unittest.TestCase):
         response = self.client.post("/generate", json={"prompt": "  "})
         self.assertEqual(response.status_code, 422)
 
-    def test_opaque_rgb_png_is_rejected(self):
+    def test_opaque_png_gets_transparent_background(self):
+        source = Image.new("RGB", (8, 8), "white")
+        source.putpixel((4, 4), (200, 0, 0))
+        buffer = io.BytesIO()
+        source.save(buffer, "PNG")
+
         def handler(request):
             if request.url.path == "/view":
-                return httpx.Response(200, content=self.png("RGB"))
+                return httpx.Response(200, content=buffer.getvalue())
             return self.handler(request)
-        self.assertEqual(self.run_pipeline(handler).status_code, 502)
+        response = self.run_pipeline(handler)
+        self.assertEqual(response.status_code, 200)
+        result = Image.open(io.BytesIO(response.content))
+        self.assertEqual(result.getpixel((0, 0))[3], 0)
+        self.assertEqual(result.getpixel((4, 4)), (200, 0, 0, 255))
 
     def test_comfy_execution_error_is_reported(self):
         def handler(request):

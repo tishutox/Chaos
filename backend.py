@@ -11,7 +11,7 @@ import httpx
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
-from PIL import Image, UnidentifiedImageError
+from PIL import Image, ImageDraw, UnidentifiedImageError
 from pydantic import BaseModel, Field
 
 RENDER_ORIGIN = "https://chaos-pt2r.onrender.com"
@@ -65,6 +65,24 @@ def load_workflow():
     if not isinstance(workflow.get(output_id), dict):
         raise HTTPException(503, "Der konfigurierte Ausgabe-Node fehlt im Workflow.")
     return workflow, node_id, output_id
+
+
+def ensure_transparent_png(data):
+    """Return a PNG with alpha; flood-fill the solid background from the corners if missing."""
+    with Image.open(io.BytesIO(data)) as source:
+        if source.format != "PNG":
+            raise UnidentifiedImageError("not a PNG")
+        if "A" in source.getbands():
+            source.load()
+            return data
+        image = source.convert("RGBA")
+    width, height = image.size
+    for corner in ((0, 0), (width - 1, 0), (0, height - 1), (width - 1, height - 1)):
+        if image.getpixel(corner)[3]:
+            ImageDraw.floodfill(image, corner, (0, 0, 0, 0), thresh=48)
+    output = io.BytesIO()
+    image.save(output, "PNG")
+    return output.getvalue()
 
 
 def detect_output_node(workflow):
@@ -171,10 +189,7 @@ async def generate(request: GenerateRequest):
                         result.raise_for_status()
                         data = result.content
                         try:
-                            with Image.open(io.BytesIO(data)) as png:
-                                if png.format != "PNG" or "A" not in png.getbands():
-                                    raise HTTPException(502, "Der Workflow muss ein PNG mit Alpha-Kanal ausgeben.")
-                                png.load()
+                            data = ensure_transparent_png(data)
                         except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:
                             raise HTTPException(502, "ComfyUI hat kein gültiges PNG zurückgegeben.") from exc
                         return Response(data, media_type="image/png")
