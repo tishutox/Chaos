@@ -9,14 +9,15 @@
     <script src="{{ url_for('static', filename='toolbar.js') }}" defer></script>
     <script src="{{ url_for('static', filename='generator.js') }}" defer></script>
   </head>
-  <body>
+  <body class="editor-body">
     {% macro icon(name) -%}
       <span class="icon" aria-hidden="true" style="--icon-url: url('{{ url_for('static', filename='svg/' ~ name ~ '.svg') }}')"></span>
     {%- endmacro %}
     <header class="topbar">
       <a class="home-button" href="{{ url_for('home') }}" aria-label="Neuer Arbeitsbereich" title="Neuer Arbeitsbereich">
-        {{ icon('house') }}
+        {{ icon('box') }}
       </a>
+      <div class="brand"><strong>ASSET<span>FORGE</span></strong><small>CREATIVE WORKSPACE</small></div>
       <button class="icon-button mobile-toggle" type="button" aria-label="Menü öffnen" aria-expanded="false" aria-controls="toolbar">
         <span class="icon menu-equal" aria-hidden="true" style="--icon-url: url('{{ url_for('static', filename='svg/equal.svg') }}')"></span>
         <span class="icon menu-close" aria-hidden="true" style="--icon-url: url('{{ url_for('static', filename='svg/x.svg') }}')"></span>
@@ -52,32 +53,48 @@
       </nav>
     </header>
 
-    <main>
-      <section class="welcome" aria-labelledby="page-title">
-        <p class="eyebrow">EURE KREATIVE WERKSTATT</p>
-        <h1 id="page-title">Ideen werden <span>Assets.</span></h1>
-        <p class="intro">Beschreibe deine Idee und erstelle ein Pixel-Art-Asset.</p>
-      </section>
+    <main class="editor-main" id="generator">
+      <div class="editor-titlebar">
+        <div><p class="editor-breadcrumb">WORKSPACE <span>/</span> ASSET GENERATOR</p><h1>2D Asset Studio</h1></div>
+        <span class="editor-badge"><span class="viewport-dot"></span> LOKALER WORKSPACE</span>
+      </div>
 
-      <section class="workspace" id="generator" aria-label="2D-Generator">
-        <div class="generator-heading"><span class="viewport-dot"></span> 2D ASSET VIEWPORT</div>
-        <div class="generator-grid">
-          <form id="generator-form">
-            <label for="asset-prompt">Deine Asset-Idee</label>
-            <textarea id="asset-prompt" maxlength="2000" rows="4" required placeholder="Zum Beispiel: ein magisches Schwert"></textarea>
-            <p class="field-note">Ollama optimiert deinen Prompt, ComfyUI erstellt das PNG.</p>
-            <button class="generate-button" type="submit">Asset generieren</button>
-            <p id="generator-status" role="status" aria-live="polite"></p>
-          </form>
-          <div class="preview" aria-label="Asset-Vorschau">
-            <p id="preview-placeholder">Dein Asset erscheint hier.</p>
-            <img id="asset-preview" alt="Generiertes Pixel-Art-Asset" hidden>
-            <a id="download-asset" download="asset.png" hidden>PNG herunterladen</a>
+      <div class="editor-layout">
+        <section class="editor-panel generator-panel" aria-labelledby="generator-title">
+          <div class="panel-heading"><span>01</span><h2 id="generator-title">Generator</h2><span class="panel-heading-end">2D</span></div>
+          <div class="panel-content">
+            <p class="panel-kicker">PIXEL ART / GENERIERUNG</p>
+            <h3>Deine Idee, dein Asset.</h3>
+            <p class="panel-description">Beschreibe, was du erstellen möchtest. Die Pipeline übernimmt den Rest.</p>
+            <form id="generator-form">
+              <label for="asset-prompt">Asset-Beschreibung</label>
+              <textarea id="asset-prompt" maxlength="2000" rows="6" required placeholder="Zum Beispiel: ein magisches Schwert mit blauer Klinge"></textarea>
+              <p class="field-note">Ollama optimiert deinen Prompt, ComfyUI erstellt das PNG.</p>
+              <button class="generate-button" type="submit">{{ icon('palette') }} Asset generieren <span aria-hidden="true">→</span></button>
+              <p id="generator-status" role="status" aria-live="polite"></p>
+            </form>
+            <div class="pipeline-info"><span class="pipeline-symbol" aria-hidden="true">✦</span><div><strong>Von der Idee zum Pixel</strong><p>Dein Bild wird nach der Generierung lokal im Browser gespeichert.</p></div></div>
           </div>
-        </div>
-      </section>
-    </main>
+        </section>
 
-    <footer>Ein Uniprojekt · Asset Generator</footer>
+        <section class="editor-panel viewport-panel" aria-labelledby="viewport-title">
+          <div class="panel-heading"><span class="viewport-dot"></span><h2 id="viewport-title">Viewport</h2><span class="panel-heading-end">2D PREVIEW</span></div>
+          <div class="viewport-toolbar"><span class="viewport-tab">Asset-Vorschau</span><span>PNG <span class="toolbar-separator">/</span> PIXEL ART</span></div>
+          <div class="preview" aria-label="Asset-Vorschau">
+            <div id="preview-placeholder" class="preview-empty">
+              <div class="preview-emblem" aria-hidden="true">{{ icon('box') }}</div>
+              <strong>Dein Viewport ist bereit</strong>
+              <p>Beschreibe links dein Asset und starte die Generierung.</p>
+            </div>
+            <img id="asset-preview" alt="Generiertes Pixel-Art-Asset" hidden>
+            <a id="download-asset" download="asset.png" hidden>{{ icon('download') }} PNG herunterladen</a>
+            <span class="viewport-corner viewport-corner-top" aria-hidden="true"></span>
+            <span class="viewport-corner viewport-corner-bottom" aria-hidden="true"></span>
+          </div>
+          <div class="viewport-footer"><span>ASSET VIEW</span><span>TRANSPARENZRASTER</span></div>
+        </section>
+      </div>
+      <div class="editor-bottom"><span>ASSET GENERATOR <span class="toolbar-separator">/</span> 2D STUDIO</span><span>UNIPROJEKT</span></div>
+    </main>
   </body>
 </html>
