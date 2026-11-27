@@ -139,7 +139,7 @@ async def generate(request: GenerateRequest):
     ollama_url = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
     comfy_url = os.getenv("COMFY_URL", "http://127.0.0.1:8188").rstrip("/")
     try:
-        async with httpx.AsyncClient(timeout=120.0) as client:
+        async with httpx.AsyncClient(timeout=600.0) as client:
             answer = await client.post(
                 f"{ollama_url}/api/chat",
                 json={
