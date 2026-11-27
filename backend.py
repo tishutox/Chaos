@@ -193,10 +193,11 @@ async def status():
                     f"{COMFY_CLOUD_BASE_URL}/api/v2/jobs?limit=1",
                     headers={"Authorization": f"Bearer {COMFY_API_KEY}"},
                 )
-                result["comfyui"] = response.status_code < 500
-                result["cloud_auth"] = response.status_code == 200
+                result["comfyui"] = True
+                result["cloud_auth"] = response.status_code not in (401, 403)
             except httpx.RequestError:
                 result["comfyui"] = False
+                result["cloud_auth"] = False
         else:
             comfy_url = os.getenv("COMFY_URL", "http://127.0.0.1:8188").rstrip("/")
             try:
