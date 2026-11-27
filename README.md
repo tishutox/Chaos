@@ -38,7 +38,9 @@ Optionale Umgebungsvariablen für FastAPI:
 |---|---|---|
 | `OLLAMA_URL` | `http://127.0.0.1:11434` | Ollama-Server |
 | `OLLAMA_MODEL` | `llama3.2` | Installiertes Ollama-Modell |
-| `COMFY_URL` | `http://127.0.0.1:8188` | ComfyUI-Server |
+| `COMFY_URL` | `http://127.0.0.1:8188` | ComfyUI-Server (nur lokaler Modus) |
+| `COMFY_API_KEY` | leer | Comfy-Cloud-API-Key (z. B. `comfyui-…`). Wenn gesetzt, wird statt des lokalen ComfyUI die Cloud-API verwendet. |
+| `COMFY_CLOUD_BASE_URL` | `https://cloud.comfy.org` | Basis-URL der Comfy-Cloud-API |
 | `COMFY_WORKFLOW` | `workflow_api.json` | Pfad zum exportierten Workflow |
 | `COMFY_PROMPT_NODE_ID` | automatisch | ID des positiven CLIPTextEncode-Nodes |
 | `COMFY_OUTPUT_NODE_ID` | automatisch | ID des SaveImage-Nodes |

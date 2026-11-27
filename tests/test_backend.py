@@ -92,7 +92,7 @@ class PipelineTests(unittest.TestCase):
         transport = httpx.MockTransport(handler)
         with patch.object(backend.httpx, "AsyncClient", side_effect=lambda **kwargs: original_client(transport=transport, **kwargs)):
             data = self.client.get("/status").json()
-        self.assertEqual(data, {"backend": True, "ollama": False, "comfyui": False, "workflow": True})
+        self.assertEqual(data, {"backend": True, "cloud_comfy": False, "ollama": False, "comfyui": False, "workflow": True})
 
     def test_private_network_preflight_is_allowed(self):
         response = self.client.options("/generate", headers={

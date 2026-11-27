@@ -16,6 +16,9 @@ from pydantic import BaseModel, Field
 
 RENDER_ORIGIN = "https://chaos-pt2r.onrender.com"
 
+COMFY_CLOUD_BASE_URL = os.getenv("COMFY_CLOUD_BASE_URL", "https://cloud.comfy.org").rstrip("/")
+COMFY_API_KEY = os.getenv("COMFY_API_KEY", "").strip()
+
 app = FastAPI(title="Asset Generator Pipeline")
 app.add_middleware(
     CORSMiddleware,
@@ -104,6 +107,70 @@ def detect_prompt_node(workflow):
                  if isinstance(node, dict) and node.get("class_type") == "CLIPTextEncode"), None)
 
 
+async def run_local_comfy(client, workflow, comfy_url, output_id):
+    """Queue the workflow on a self-hosted ComfyUI and return the raw PNG bytes."""
+    queued = await client.post(f"{comfy_url}/prompt", json={"prompt": workflow})
+    queued.raise_for_status()
+    prompt_id = queued.json().get("prompt_id")
+    if not isinstance(prompt_id, str) or not prompt_id:
+        raise HTTPException(502, "ComfyUI hat keine Auftrags-ID zurückgegeben.")
+    deadline = time.monotonic() + 600
+    while time.monotonic() < deadline:
+        history = await client.get(f"{comfy_url}/history/{prompt_id}")
+        history.raise_for_status()
+        record = history.json().get(prompt_id)
+        if record:
+            status = record.get("status", {})
+            if status.get("status_str") == "error":
+                raise HTTPException(502, f"ComfyUI-Workflow fehlgeschlagen: {status.get('messages', [])}")
+            if status.get("completed"):
+                images = record.get("outputs", {}).get(output_id, {}).get("images", [])
+                if not images:
+                    raise HTTPException(502, "Der Ausgabe-Node hat kein Bild erzeugt.")
+                image = images[0]
+                result = await client.get(
+                    f"{comfy_url}/view",
+                    params={
+                        "filename": image["filename"],
+                        "subfolder": image.get("subfolder", ""),
+                        "type": image.get("type", "output"),
+                    },
+                )
+                result.raise_for_status()
+                return result.content
+        await asyncio.sleep(1)
+    raise HTTPException(504, "Zeitüberschreitung beim Warten auf ComfyUI.")
+
+
+async def run_cloud_comfy(client, workflow, cloud_base, api_key):
+    """Submit the workflow to Comfy Cloud and return the raw PNG bytes."""
+    headers = {"Authorization": f"Bearer {api_key}"}
+    submitted = await client.post(f"{cloud_base}/api/v2/jobs", headers=headers, json={"workflow": workflow})
+    submitted.raise_for_status()
+    job_id = submitted.json().get("id")
+    if not isinstance(job_id, str) or not job_id:
+        raise HTTPException(502, "Comfy Cloud hat keine Job-ID zurückgegeben.")
+    deadline = time.monotonic() + 600
+    while time.monotonic() < deadline:
+        job = await client.get(f"{cloud_base}/api/v2/jobs/{job_id}", headers=headers)
+        job.raise_for_status()
+        data = job.json()
+        status = data.get("status")
+        if status in ("failed", "canceled", "expired"):
+            detail = (data.get("error") or {}).get("message") or status
+            raise HTTPException(502, f"Comfy Cloud-Job fehlgeschlagen: {detail}")
+        if status == "succeeded":
+            outputs = data.get("outputs") or []
+            image = next((o for o in outputs if o.get("type") == "image"), None)
+            if not image:
+                raise HTTPException(502, "Comfy Cloud hat kein Bild erzeugt.")
+            result = await client.get(image["url"])
+            result.raise_for_status()
+            return result.content
+        await asyncio.sleep(2)
+    raise HTTPException(504, "Zeitüberschreitung beim Warten auf Comfy Cloud.")
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
@@ -111,18 +178,31 @@ async def health():
 
 @app.get("/status")
 async def status():
-    """Report which of the local services are reachable."""
-    targets = {
-        "ollama": os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/") + "/api/tags",
-        "comfyui": os.getenv("COMFY_URL", "http://127.0.0.1:8188").rstrip("/") + "/system_stats",
-    }
-    result = {"backend": True}
-    async with httpx.AsyncClient(timeout=3.0) as client:
-        for name, url in targets.items():
+    """Report which of the services are reachable (local ComfyUI or Comfy Cloud)."""
+    result = {"backend": True, "cloud_comfy": bool(COMFY_API_KEY)}
+    async with httpx.AsyncClient(timeout=5.0) as client:
+        ollama_url = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
+        try:
+            result["ollama"] = (await client.get(f"{ollama_url}/api/tags")).is_success
+        except httpx.RequestError:
+            result["ollama"] = False
+
+        if COMFY_API_KEY:
             try:
-                result[name] = (await client.get(url)).is_success
+                response = await client.get(
+                    f"{COMFY_CLOUD_BASE_URL}/api/v2/jobs?limit=1",
+                    headers={"Authorization": f"Bearer {COMFY_API_KEY}"},
+                )
+                result["comfyui"] = response.status_code < 500
+                result["cloud_auth"] = response.status_code == 200
             except httpx.RequestError:
-                result[name] = False
+                result["comfyui"] = False
+        else:
+            comfy_url = os.getenv("COMFY_URL", "http://127.0.0.1:8188").rstrip("/")
+            try:
+                result["comfyui"] = (await client.get(f"{comfy_url}/system_stats")).is_success
+            except httpx.RequestError:
+                result["comfyui"] = False
     try:
         load_workflow()
         result["workflow"] = True
@@ -138,7 +218,6 @@ async def generate(request: GenerateRequest):
         raise HTTPException(422, "Bitte eine Asset-Idee eingeben.")
     workflow, node_id, output_id = load_workflow()
     ollama_url = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
-    comfy_url = os.getenv("COMFY_URL", "http://127.0.0.1:8188").rstrip("/")
     try:
         async with httpx.AsyncClient(timeout=600.0) as client:
             answer = await client.post(
@@ -159,43 +238,16 @@ async def generate(request: GenerateRequest):
             workflow[node_id]["inputs"]["text"] = ", ".join(
                 part for part in (optimized, request.base_prompt.strip()) if part
             )
-            queued = await client.post(f"{comfy_url}/prompt", json={"prompt": workflow})
-            queued.raise_for_status()
-            prompt_id = queued.json().get("prompt_id")
-            if not isinstance(prompt_id, str) or not prompt_id:
-                raise HTTPException(502, "ComfyUI hat keine Auftrags-ID zurückgegeben.")
-
-            deadline = time.monotonic() + 600
-            while time.monotonic() < deadline:
-                history = await client.get(f"{comfy_url}/history/{prompt_id}")
-                history.raise_for_status()
-                record = history.json().get(prompt_id)
-                if record:
-                    status = record.get("status", {})
-                    if status.get("status_str") == "error":
-                        raise HTTPException(502, f"ComfyUI-Workflow fehlgeschlagen: {status.get('messages', [])}")
-                    if status.get("completed"):
-                        images = record.get("outputs", {}).get(output_id, {}).get("images", [])
-                        if not images:
-                            raise HTTPException(502, "Der Ausgabe-Node hat kein Bild erzeugt.")
-                        image = images[0]
-                        result = await client.get(
-                            f"{comfy_url}/view",
-                            params={
-                                "filename": image["filename"],
-                                "subfolder": image.get("subfolder", ""),
-                                "type": image.get("type", "output"),
-                            },
-                        )
-                        result.raise_for_status()
-                        data = result.content
-                        try:
-                            data = ensure_transparent_png(data)
-                        except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:
-                            raise HTTPException(502, "ComfyUI hat kein gültiges PNG zurückgegeben.") from exc
-                        return Response(data, media_type="image/png")
-                await asyncio.sleep(1)
-            raise HTTPException(504, "Zeitüberschreitung beim Warten auf ComfyUI.")
+            if COMFY_API_KEY:
+                data = await run_cloud_comfy(client, workflow, COMFY_CLOUD_BASE_URL, COMFY_API_KEY)
+            else:
+                comfy_url = os.getenv("COMFY_URL", "http://127.0.0.1:8188").rstrip("/")
+                data = await run_local_comfy(client, workflow, comfy_url, output_id)
+            try:
+                data = ensure_transparent_png(data)
+            except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:
+                raise HTTPException(502, "ComfyUI hat kein gültiges PNG zurückgegeben.") from exc
+            return Response(data, media_type="image/png")
     except httpx.TimeoutException as exc:
         raise HTTPException(504, "Zeitüberschreitung bei Ollama oder ComfyUI.") from exc
     except httpx.HTTPStatusError as exc:
