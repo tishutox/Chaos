@@ -55,3 +55,9 @@ Die Workspace-Verwaltung verwendet IndexedDB `asset-generator`, Store `assets`, 
 ## Deployment
 
 Die Flask-Oberfläche läuft z. B. mit `gunicorn main:app --bind 0.0.0.0:$PORT` auf Render. Die Pipeline läuft immer auf dem eigenen Rechner. Die Render-Seite ruft `http://localhost:8000` im Browser des Nutzers auf, daher muss auf dem jeweiligen Rechner `.\start.ps1` laufen. Das Backend erlaubt dafür die Render-Origin und antwortet auf Private-Network-Preflights. Chrome/Edge fragen ggf. nach der Erlaubnis für den Zugriff auf lokale Geräte; diese bestätigen. Firefox oder Browser-Erweiterungen (Adblocker, Tracking-Schutz) können localhost-Anfragen blockieren. Dann die Seite lokal unter http://127.0.0.1:5000 verwenden.
+
+## Zugriff von Mobilgeräten (gleiches WLAN)
+
+Frontend (`main.py`, Port 5000) und Backend (`start.ps1`, Port 8000) binden an `0.0.0.0` und sind damit im lokalen Netzwerk erreichbar. Auf dem PC die lokale IPv4-Adresse ermitteln (z. B. `ipconfig`) und im Mobil-Browser `http://<PC-IP>:5000` öffnen. Das Frontend erkennt die IP automatisch und ruft das Backend unter `http://<PC-IP>:8000` auf; die Backend-URL lässt sich unter Einstellungen bei Bedarf überschreiben.
+
+Hinweis: Das Backend hat keine Authentifizierung und ist damit für andere Geräte im selben Netzwerk erreichbar — nur in vertrauenswürdigen Netzwerken verwenden. Die Windows-Firewall muss eingehende Verbindungen auf Port 5000 und 8000 ggf. erlauben.

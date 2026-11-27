@@ -1,5 +1,11 @@
 "use strict";
 
+function defaultBackendUrl() {
+  const host = window.location.hostname;
+  const isLocal = host === "localhost" || host === "127.0.0.1" || /^(\d{1,3}\.){3}\d{1,3}$/.test(host);
+  return isLocal ? `http://${host}:8000` : "http://localhost:8000";
+}
+
 const STORAGE_KEY = "asset-generator.settings.v1";
 const DATABASE_NAME = "asset-generator";
 const STORE_NAME = "assets";
@@ -213,7 +219,7 @@ document.querySelector("#test-connection").addEventListener("click", async (even
   connectionStatus.classList.remove("is-connected");
   try {
     const backendUrl = readForm().backendUrl;
-    const url = `${(backendUrl || "http://localhost:8000").replace(/\/+$/, "")}/health`;
+    const url = `${(backendUrl || defaultBackendUrl()).replace(/\/+$/, "")}/health`;
     const response = await fetch(url, { signal: controller.signal, credentials: "omit", cache: "no-store" });
     if (!response.ok) throw new Error(`HTTP ${response.status}`);
     if (connectionController !== controller) return;

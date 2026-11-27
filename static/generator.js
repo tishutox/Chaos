@@ -1,5 +1,11 @@
 "use strict";
 
+function defaultBackendUrl() {
+  const host = window.location.hostname;
+  const isLocal = host === "localhost" || host === "127.0.0.1" || /^(\d{1,3}\.){3}\d{1,3}$/.test(host);
+  return isLocal ? `http://${host}:8000` : "http://localhost:8000";
+}
+
 const generatorForm = document.querySelector("#generator-form");
 const generatorStatus = document.querySelector("#generator-status");
 const preview = document.querySelector("#asset-preview");
@@ -56,7 +62,7 @@ generatorForm.addEventListener("submit", async (event) => {
         (settings.basePrompt !== undefined && typeof settings.basePrompt !== "string")) {
       throw new Error("Die gespeicherten Einstellungen sind ungültig.");
     }
-    const base = new URL(settings.backendUrl || "http://localhost:8000");
+    const base = new URL(settings.backendUrl || defaultBackendUrl());
     if (!["http:", "https:"].includes(base.protocol) || base.username || base.password || base.search || base.hash) {
       throw new Error("Die Backend-URL ist ungültig.");
     }

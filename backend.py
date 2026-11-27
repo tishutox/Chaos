@@ -22,6 +22,7 @@ app.add_middleware(
     allow_origins=os.getenv(
         "UI_ORIGINS", f"http://localhost:5000,http://127.0.0.1:5000,{RENDER_ORIGIN}"
     ).split(","),
+    allow_origin_regex=r"http://(?:localhost|127\.0\.0\.1|192\.168\.\d+\.\d+|10(?:\.\d+){3}|172\.(?:1[6-9]|2\d|3[01])\.\d+\.\d+):5000",
     allow_methods=["GET", "POST"],
     allow_headers=["Content-Type"],
 )
