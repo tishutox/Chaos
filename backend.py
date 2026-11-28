@@ -1,6 +1,7 @@
-"""Local 2D asset pipeline: Ollama prompt expansion and ComfyUI generation."""
+"""2D asset pipeline: prompt expansion (Gemini or Ollama) and image generation (Cloudflare, Pollinations, or ComfyUI)."""
 
 import asyncio
+import base64
 import io
 import json
 import os
@@ -21,6 +22,13 @@ COMFY_CLOUD_BASE_URL = os.getenv("COMFY_CLOUD_BASE_URL", "https://cloud.comfy.or
 COMFY_API_KEY = os.getenv("COMFY_API_KEY", "").strip()
 IMAGE_API = os.getenv("IMAGE_API", "").strip().lower()
 POLLINATIONS_IMAGE_URL = "https://image.pollinations.ai/prompt/{prompt}"
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "").strip()
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite")
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent"
+CLOUDFLARE_API_TOKEN = os.getenv("CLOUDFLARE_API_TOKEN", "").strip()
+CLOUDFLARE_ACCOUNT_ID = os.getenv("CLOUDFLARE_ACCOUNT_ID", "").strip()
+CLOUDFLARE_MODEL = os.getenv("CLOUDFLARE_MODEL", "@cf/black-forest-labs/flux-1-schnell")
+CLOUDFLARE_AI_URL = "https://api.cloudflare.com/client/v4/accounts/{account}/ai/run/{model}"
 
 app = FastAPI(title="Asset Generator Pipeline")
 app.add_middleware(
@@ -46,6 +54,11 @@ SYSTEM_PROMPT = (
     "pixel art game asset. Include a front or isometric view, solid white "
     "background, crisp pixel edges, no anti-aliasing and 16-bit style. "
     "Return only the image prompt, without explanation."
+)
+
+STYLE_TAGS = (
+    "pixel art, 16-bit retro game sprite, crisp hard-edged pixels, flat shading, "
+    "clean dark outlines, solid white background, centered, front view, no anti-aliasing"
 )
 
 
@@ -118,6 +131,73 @@ def detect_prompt_node(workflow):
                     return str(link[0])
     return next((key for key, node in workflow.items()
                  if isinstance(node, dict) and node.get("class_type") == "CLIPTextEncode"), None)
+
+
+async def run_ollama_prompt(client, prompt, ollama_url):
+    answer = await client.post(
+        f"{ollama_url}/api/chat",
+        json={
+            "model": os.getenv("OLLAMA_MODEL", "llama3.2"),
+            "stream": False,
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
+            ],
+        },
+    )
+    answer.raise_for_status()
+    text = answer.json().get("message", {}).get("content", "").strip()
+    if not text:
+        raise HTTPException(502, "Ollama hat keinen Prompt zurückgegeben.")
+    return text
+
+
+async def run_gemini_prompt(client, prompt):
+    payload = {
+        "systemInstruction": {"parts": [{"text": SYSTEM_PROMPT}]},
+        "contents": [{"parts": [{"text": prompt}]}],
+    }
+    for attempt in range(3):
+        result = await client.post(
+            GEMINI_URL.format(model=GEMINI_MODEL),
+            headers={"x-goog-api-key": GEMINI_API_KEY},
+            json=payload,
+        )
+        if result.status_code == 503 and attempt < 2:
+            await asyncio.sleep(2)
+            continue
+        result.raise_for_status()
+        break
+    parts = result.json().get("candidates", [{}])[0].get("content", {}).get("parts", [])
+    text = " ".join(part.get("text", "").strip() for part in parts if part.get("text")).strip()
+    if not text:
+        raise HTTPException(502, "Gemini hat keinen Prompt zurückgegeben.")
+    return text
+
+
+async def expand_prompt(client, prompt):
+    """Expand the idea via Gemini (cloud); fall back to style tags or local Ollama."""
+    if GEMINI_API_KEY:
+        try:
+            return await run_gemini_prompt(client, prompt)
+        except (httpx.HTTPStatusError, httpx.RequestError):
+            return f"{prompt}, {STYLE_TAGS}"
+    ollama_url = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
+    return await run_ollama_prompt(client, prompt, ollama_url)
+
+
+async def run_cloudflare_image(client, prompt):
+    """Generate an image via Cloudflare Workers AI (FLUX/SDXL) and return the raw bytes."""
+    result = await client.post(
+        CLOUDFLARE_AI_URL.format(account=CLOUDFLARE_ACCOUNT_ID, model=CLOUDFLARE_MODEL),
+        headers={"Authorization": f"Bearer {CLOUDFLARE_API_TOKEN}"},
+        json={"prompt": prompt},
+    )
+    result.raise_for_status()
+    image_b64 = (result.json().get("result") or {}).get("image")
+    if not image_b64:
+        raise HTTPException(502, "Cloudflare hat kein Bild zurückgegeben.")
+    return base64.b64decode(image_b64)
 
 
 async def run_local_comfy(client, workflow, comfy_url, output_id):
@@ -202,14 +282,16 @@ async def health():
 
 @app.get("/status")
 async def status():
-    """Report which of the services are reachable (local ComfyUI, Comfy Cloud, or Pollinations)."""
-    if IMAGE_API == "pollinations":
+    """Report which of the services are reachable (Cloudflare, Pollinations, or ComfyUI)."""
+    if IMAGE_API == "cloudflare":
+        mode = "cloudflare"
+    elif IMAGE_API == "pollinations":
         mode = "pollinations"
     elif COMFY_API_KEY:
         mode = "comfy_cloud"
     else:
         mode = "local"
-    result = {"backend": True, "image_api": mode}
+    result = {"backend": True, "image_api": mode, "llm_api": "gemini" if GEMINI_API_KEY else "ollama"}
     async with httpx.AsyncClient(timeout=5.0) as client:
         ollama_url = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
         try:
@@ -234,11 +316,14 @@ async def status():
                 result["comfyui"] = (await client.get(f"{comfy_url}/system_stats")).is_success
             except httpx.RequestError:
                 result["comfyui"] = False
-    try:
-        load_workflow()
-        result["workflow"] = True
-    except HTTPException:
-        result["workflow"] = False
+    if mode in ("cloudflare", "pollinations"):
+        result["workflow"] = None
+    else:
+        try:
+            load_workflow()
+            result["workflow"] = True
+        except HTTPException:
+            result["workflow"] = False
     return result
 
 
@@ -247,31 +332,30 @@ async def generate(request: GenerateRequest):
     prompt = request.prompt.strip()
     if not prompt:
         raise HTTPException(422, "Bitte eine Asset-Idee eingeben.")
-    if IMAGE_API != "pollinations":
+    use_workflow = IMAGE_API not in ("pollinations", "cloudflare")
+    if use_workflow:
         workflow, node_id, output_id = load_workflow()
-    ollama_url = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
     try:
         async with httpx.AsyncClient(timeout=600.0) as client:
-            answer = await client.post(
-                f"{ollama_url}/api/chat",
-                json={
-                    "model": os.getenv("OLLAMA_MODEL", "llama3.2"),
-                    "stream": False,
-                    "messages": [
-                        {"role": "system", "content": SYSTEM_PROMPT},
-                        {"role": "user", "content": prompt},
-                    ],
-                },
-            )
-            answer.raise_for_status()
-            optimized = answer.json().get("message", {}).get("content", "").strip()
-            if not optimized:
-                raise HTTPException(502, "Ollama hat keinen Prompt zurückgegeben.")
+            optimized = await expand_prompt(client, prompt)
             final_prompt = ", ".join(
                 part for part in (optimized, request.base_prompt.strip()) if part
             )
 
-            if IMAGE_API == "pollinations":
+            if IMAGE_API == "cloudflare":
+                try:
+                    data = await run_cloudflare_image(client, final_prompt)
+                except httpx.HTTPStatusError as exc:
+                    if exc.response.status_code == 400 and "NSFW" in exc.response.text:
+                        data = await run_pollinations(client, final_prompt)
+                    else:
+                        raise
+                try:
+                    data = ensure_transparent_png(data)
+                    data = pixelate_png(data)
+                except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:
+                    raise HTTPException(502, "Cloudflare hat kein gültiges Bild zurückgegeben.") from exc
+            elif IMAGE_API == "pollinations":
                 data = await run_pollinations(client, final_prompt)
                 try:
                     data = ensure_transparent_png(data)
@@ -291,10 +375,10 @@ async def generate(request: GenerateRequest):
                     raise HTTPException(502, "ComfyUI hat kein gültiges PNG zurückgegeben.") from exc
             return Response(data, media_type="image/png")
     except httpx.TimeoutException as exc:
-        raise HTTPException(504, "Zeitüberschreitung bei Ollama oder ComfyUI.") from exc
+        raise HTTPException(504, "Zeitüberschreitung beim Prompt- oder Bilddienst.") from exc
     except httpx.HTTPStatusError as exc:
         raise HTTPException(502, f"Dienstfehler ({exc.response.status_code}): {exc.response.text[:500]}") from exc
     except httpx.RequestError as exc:
-        raise HTTPException(502, f"Ollama oder ComfyUI ist nicht erreichbar: {exc}") from exc
+        raise HTTPException(502, f"Prompt- oder Bilddienst ist nicht erreichbar: {exc}") from exc
     except (ValueError, KeyError, TypeError, AttributeError) as exc:
-        raise HTTPException(502, "Ungültige Antwort von Ollama oder ComfyUI.") from exc
+        raise HTTPException(502, "Ungültige Antwort vom Prompt- oder Bilddienst.") from exc

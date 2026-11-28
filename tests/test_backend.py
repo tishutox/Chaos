@@ -34,6 +34,9 @@ class PipelineTests(unittest.TestCase):
         self.image_api = patch.object(backend, "IMAGE_API", "")
         self.image_api.start()
         self.addCleanup(self.image_api.stop)
+        self.gemini_key = patch.object(backend, "GEMINI_API_KEY", "")
+        self.gemini_key.start()
+        self.addCleanup(self.gemini_key.stop)
         self.client = TestClient(backend.app)
         self.addCleanup(self.client.close)
         self.queued_workflow = None
@@ -98,7 +101,7 @@ class PipelineTests(unittest.TestCase):
         transport = httpx.MockTransport(handler)
         with patch.object(backend.httpx, "AsyncClient", side_effect=lambda **kwargs: original_client(transport=transport, **kwargs)):
             data = self.client.get("/status").json()
-        self.assertEqual(data, {"backend": True, "image_api": "local", "ollama": False, "comfyui": False, "workflow": True})
+        self.assertEqual(data, {"backend": True, "image_api": "local", "llm_api": "ollama", "ollama": False, "comfyui": False, "workflow": True})
 
     def test_private_network_preflight_is_allowed(self):
         response = self.client.options("/generate", headers={
