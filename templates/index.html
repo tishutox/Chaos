@@ -21,13 +21,13 @@
         {{ icon('box') }}
       </a>
       <div class="brand"><strong>ASSET<span>FORGE</span></strong><small>CREATIVE WORKSPACE</small></div>
-      <button class="icon-button mobile-toggle" type="button" aria-label="Menü öffnen" aria-expanded="false" aria-controls="toolbar">
-        <span class="icon menu-equal" aria-hidden="true" style="--icon-url: url('{{ url_for('static', filename='svg/equal.svg') }}')"></span>
-        <span class="icon menu-close" aria-hidden="true" style="--icon-url: url('{{ url_for('static', filename='svg/x.svg') }}')"></span>
-      </button>
       <button class="icon-button theme-toggle mobile-theme-toggle" type="button" aria-label="Dark Mode aktivieren" title="Dark Mode aktivieren">
         <span class="icon theme-icon-moon" aria-hidden="true" style="--icon-url: url('{{ url_for('static', filename='svg/moon.svg') }}')"></span>
         <span class="icon theme-icon-sun" aria-hidden="true" style="--icon-url: url('{{ url_for('static', filename='svg/sun.svg') }}')"></span>
+      </button>
+      <button class="icon-button mobile-toggle" type="button" aria-label="Menü öffnen" aria-expanded="false" aria-controls="toolbar">
+        <span class="icon menu-equal" aria-hidden="true" style="--icon-url: url('{{ url_for('static', filename='svg/equal.svg') }}')"></span>
+        <span class="icon menu-close" aria-hidden="true" style="--icon-url: url('{{ url_for('static', filename='svg/x.svg') }}')"></span>
       </button>
       <nav class="toolbar" id="toolbar" aria-label="Arbeitsbereich-Werkzeuge">
         <div class="toolbar-group toolbar-tools">

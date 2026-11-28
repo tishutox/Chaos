@@ -171,7 +171,7 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 [data-theme="dark"] .theme-toggle .theme-icon-sun { display: block; }
 .mobile-theme-toggle { display: none; }
 @media (max-width: 700px) {
-  .mobile-theme-toggle { display: inline-flex; }
+  .mobile-theme-toggle { display: inline-flex; margin-right: -7px; }
   .toolbar .theme-toggle { display: none; }
 }
 
