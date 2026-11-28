@@ -25,6 +25,10 @@
         <span class="icon menu-equal" aria-hidden="true" style="--icon-url: url('{{ url_for('static', filename='svg/equal.svg') }}')"></span>
         <span class="icon menu-close" aria-hidden="true" style="--icon-url: url('{{ url_for('static', filename='svg/x.svg') }}')"></span>
       </button>
+      <button class="icon-button theme-toggle mobile-theme-toggle" type="button" aria-label="Dark Mode aktivieren" title="Dark Mode aktivieren">
+        <span class="icon theme-icon-moon" aria-hidden="true" style="--icon-url: url('{{ url_for('static', filename='svg/moon.svg') }}')"></span>
+        <span class="icon theme-icon-sun" aria-hidden="true" style="--icon-url: url('{{ url_for('static', filename='svg/sun.svg') }}')"></span>
+      </button>
       <nav class="toolbar" id="toolbar" aria-label="Arbeitsbereich-Werkzeuge">
         <div class="toolbar-group toolbar-tools">
           <a class="icon-button" href="#generator" aria-label="2D-Generator" title="2D-Generator">{{ icon('palette') }}<span>2D-Generator</span></a>
@@ -51,7 +55,7 @@
               <small>Export noch nicht verfügbar</small>
             </div>
           </div>
-          <button class="icon-button theme-toggle" id="theme-toggle" type="button" aria-label="Dark Mode aktivieren" title="Dark Mode aktivieren">
+          <button class="icon-button theme-toggle" type="button" aria-label="Dark Mode aktivieren" title="Dark Mode aktivieren">
             <span class="icon theme-icon-moon" aria-hidden="true" style="--icon-url: url('{{ url_for('static', filename='svg/moon.svg') }}')"></span>
             <span class="icon theme-icon-sun" aria-hidden="true" style="--icon-url: url('{{ url_for('static', filename='svg/sun.svg') }}')"></span>
           </button>
