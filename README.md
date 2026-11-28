@@ -41,6 +41,7 @@ Optionale Umgebungsvariablen für FastAPI:
 | `COMFY_URL` | `http://127.0.0.1:8188` | ComfyUI-Server (nur lokaler Modus) |
 | `COMFY_API_KEY` | leer | Comfy-Cloud-API-Key (z. B. `comfyui-…`). Wenn gesetzt, wird statt des lokalen ComfyUI die Cloud-API verwendet. |
 | `COMFY_CLOUD_BASE_URL` | `https://cloud.comfy.org` | Basis-URL der Comfy-Cloud-API |
+| `IMAGE_API` | leer | `pollinations` aktiviert die kostenlose Pollinations.ai-Bild-API (kein Workflow/ComfyUI nötig, pixeliert + transparenter Hintergrund automatisch). Andernfalls greifen die ComfyUI-Modi. |
 | `COMFY_WORKFLOW` | `workflow_api.json` | Pfad zum exportierten Workflow |
 | `COMFY_PROMPT_NODE_ID` | automatisch | ID des positiven CLIPTextEncode-Nodes |
 | `COMFY_OUTPUT_NODE_ID` | automatisch | ID des SaveImage-Nodes |

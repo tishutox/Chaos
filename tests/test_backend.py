@@ -24,10 +24,16 @@ class PipelineTests(unittest.TestCase):
             }, file)
         self.env = patch.dict(os.environ, {
             "COMFY_WORKFLOW": path, "COMFY_PROMPT_NODE_ID": "6",
-            "COMFY_OUTPUT_NODE_ID": "9",
+            "COMFY_OUTPUT_NODE_ID": "9", "COMFY_API_KEY": "", "IMAGE_API": "",
         })
         self.env.start()
         self.addCleanup(self.env.stop)
+        self.api_key = patch.object(backend, "COMFY_API_KEY", "")
+        self.api_key.start()
+        self.addCleanup(self.api_key.stop)
+        self.image_api = patch.object(backend, "IMAGE_API", "")
+        self.image_api.start()
+        self.addCleanup(self.image_api.stop)
         self.client = TestClient(backend.app)
         self.addCleanup(self.client.close)
         self.queued_workflow = None
@@ -92,7 +98,7 @@ class PipelineTests(unittest.TestCase):
         transport = httpx.MockTransport(handler)
         with patch.object(backend.httpx, "AsyncClient", side_effect=lambda **kwargs: original_client(transport=transport, **kwargs)):
             data = self.client.get("/status").json()
-        self.assertEqual(data, {"backend": True, "cloud_comfy": False, "ollama": False, "comfyui": False, "workflow": True})
+        self.assertEqual(data, {"backend": True, "image_api": "local", "ollama": False, "comfyui": False, "workflow": True})
 
     def test_private_network_preflight_is_allowed(self):
         response = self.client.options("/generate", headers={

@@ -6,6 +6,7 @@ import json
 import os
 import time
 from pathlib import Path
+from urllib.parse import quote
 
 import httpx
 from fastapi import FastAPI, HTTPException
@@ -18,6 +19,8 @@ RENDER_ORIGIN = "https://chaos-pt2r.onrender.com"
 
 COMFY_CLOUD_BASE_URL = os.getenv("COMFY_CLOUD_BASE_URL", "https://cloud.comfy.org").rstrip("/")
 COMFY_API_KEY = os.getenv("COMFY_API_KEY", "").strip()
+IMAGE_API = os.getenv("IMAGE_API", "").strip().lower()
+POLLINATIONS_IMAGE_URL = "https://image.pollinations.ai/prompt/{prompt}"
 
 app = FastAPI(title="Asset Generator Pipeline")
 app.add_middleware(
@@ -74,9 +77,7 @@ def load_workflow():
 def ensure_transparent_png(data):
     """Return a PNG with alpha; flood-fill the solid background from the corners if missing."""
     with Image.open(io.BytesIO(data)) as source:
-        if source.format != "PNG":
-            raise UnidentifiedImageError("not a PNG")
-        if "A" in source.getbands():
+        if "A" in source.getbands() and source.format == "PNG":
             source.load()
             return data
         image = source.convert("RGBA")
@@ -86,6 +87,18 @@ def ensure_transparent_png(data):
             ImageDraw.floodfill(image, corner, (0, 0, 0, 0), thresh=48)
     output = io.BytesIO()
     image.save(output, "PNG")
+    return output.getvalue()
+
+
+def pixelate_png(data, scale=8):
+    """Downscale then upscale with nearest-neighbor to produce crisp pixel edges."""
+    with Image.open(io.BytesIO(data)) as source:
+        image = source.convert("RGBA")
+        width, height = image.size
+        small = image.resize((max(1, width // scale), max(1, height // scale)), Image.NEAREST)
+        pixelated = small.resize((width, height), Image.NEAREST)
+    output = io.BytesIO()
+    pixelated.save(output, "PNG")
     return output.getvalue()
 
 
@@ -171,6 +184,17 @@ async def run_cloud_comfy(client, workflow, cloud_base, api_key):
     raise HTTPException(504, "Zeitüberschreitung beim Warten auf Comfy Cloud.")
 
 
+async def run_pollinations(client, prompt, width=512, height=512):
+    """Generate an image via the free Pollinations.ai API and return the raw bytes."""
+    url = POLLINATIONS_IMAGE_URL.format(prompt=quote(prompt))
+    result = await client.get(
+        url,
+        params={"width": width, "height": height, "model": "flux", "nologo": "true"},
+    )
+    result.raise_for_status()
+    return result.content
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
@@ -178,8 +202,14 @@ async def health():
 
 @app.get("/status")
 async def status():
-    """Report which of the services are reachable (local ComfyUI or Comfy Cloud)."""
-    result = {"backend": True, "cloud_comfy": bool(COMFY_API_KEY)}
+    """Report which of the services are reachable (local ComfyUI, Comfy Cloud, or Pollinations)."""
+    if IMAGE_API == "pollinations":
+        mode = "pollinations"
+    elif COMFY_API_KEY:
+        mode = "comfy_cloud"
+    else:
+        mode = "local"
+    result = {"backend": True, "image_api": mode}
     async with httpx.AsyncClient(timeout=5.0) as client:
         ollama_url = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
         try:
@@ -187,7 +217,7 @@ async def status():
         except httpx.RequestError:
             result["ollama"] = False
 
-        if COMFY_API_KEY:
+        if mode == "comfy_cloud":
             try:
                 response = await client.get(
                     f"{COMFY_CLOUD_BASE_URL}/api/v2/jobs?limit=1",
@@ -198,7 +228,7 @@ async def status():
             except httpx.RequestError:
                 result["comfyui"] = False
                 result["cloud_auth"] = False
-        else:
+        elif mode == "local":
             comfy_url = os.getenv("COMFY_URL", "http://127.0.0.1:8188").rstrip("/")
             try:
                 result["comfyui"] = (await client.get(f"{comfy_url}/system_stats")).is_success
@@ -217,7 +247,8 @@ async def generate(request: GenerateRequest):
     prompt = request.prompt.strip()
     if not prompt:
         raise HTTPException(422, "Bitte eine Asset-Idee eingeben.")
-    workflow, node_id, output_id = load_workflow()
+    if IMAGE_API != "pollinations":
+        workflow, node_id, output_id = load_workflow()
     ollama_url = os.getenv("OLLAMA_URL", "http://127.0.0.1:11434").rstrip("/")
     try:
         async with httpx.AsyncClient(timeout=600.0) as client:
@@ -236,18 +267,28 @@ async def generate(request: GenerateRequest):
             optimized = answer.json().get("message", {}).get("content", "").strip()
             if not optimized:
                 raise HTTPException(502, "Ollama hat keinen Prompt zurückgegeben.")
-            workflow[node_id]["inputs"]["text"] = ", ".join(
+            final_prompt = ", ".join(
                 part for part in (optimized, request.base_prompt.strip()) if part
             )
-            if COMFY_API_KEY:
-                data = await run_cloud_comfy(client, workflow, COMFY_CLOUD_BASE_URL, COMFY_API_KEY)
+
+            if IMAGE_API == "pollinations":
+                data = await run_pollinations(client, final_prompt)
+                try:
+                    data = ensure_transparent_png(data)
+                    data = pixelate_png(data)
+                except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:
+                    raise HTTPException(502, "Pollinations hat kein gültiges Bild zurückgegeben.") from exc
             else:
-                comfy_url = os.getenv("COMFY_URL", "http://127.0.0.1:8188").rstrip("/")
-                data = await run_local_comfy(client, workflow, comfy_url, output_id)
-            try:
-                data = ensure_transparent_png(data)
-            except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:
-                raise HTTPException(502, "ComfyUI hat kein gültiges PNG zurückgegeben.") from exc
+                workflow[node_id]["inputs"]["text"] = final_prompt
+                if COMFY_API_KEY:
+                    data = await run_cloud_comfy(client, workflow, COMFY_CLOUD_BASE_URL, COMFY_API_KEY)
+                else:
+                    comfy_url = os.getenv("COMFY_URL", "http://127.0.0.1:8188").rstrip("/")
+                    data = await run_local_comfy(client, workflow, comfy_url, output_id)
+                try:
+                    data = ensure_transparent_png(data)
+                except (UnidentifiedImageError, OSError, Image.DecompressionBombError) as exc:
+                    raise HTTPException(502, "ComfyUI hat kein gültiges PNG zurückgegeben.") from exc
             return Response(data, media_type="image/png")
     except httpx.TimeoutException as exc:
         raise HTTPException(504, "Zeitüberschreitung bei Ollama oder ComfyUI.") from exc
