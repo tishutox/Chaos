@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#fdf4f7">
     <meta name="backend-url" content="{{ backend_url }}">
+    <script>try { if (localStorage.getItem("asset-generator.theme") === "dark") document.documentElement.dataset.theme = "dark"; } catch (e) {}</script>
     <title>Einstellungen · Asset Generator</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='theme.js') }}" defer></script>
     <script src="{{ url_for('static', filename='settings.js') }}" defer></script>
   </head>
   <body>
@@ -16,6 +18,10 @@
       </a>
       <span class="settings-topbar-title">Einstellungen</span>
       <a class="back-link" href="{{ url_for('home') }}">Zurück zum Arbeitsbereich</a>
+      <button class="icon-button theme-toggle" id="theme-toggle" type="button" aria-label="Dark Mode aktivieren" title="Dark Mode aktivieren">
+        <span class="icon theme-icon-moon" aria-hidden="true" style="--icon-url: url('{{ url_for('static', filename='svg/moon.svg') }}')"></span>
+        <span class="icon theme-icon-sun" aria-hidden="true" style="--icon-url: url('{{ url_for('static', filename='svg/sun.svg') }}')"></span>
+      </button>
     </header>
 
     <main class="settings-page">

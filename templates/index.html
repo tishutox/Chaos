@@ -5,8 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="theme-color" content="#fdf4f7">
     <meta name="backend-url" content="{{ backend_url }}">
+    <script>try { if (localStorage.getItem("asset-generator.theme") === "dark") document.documentElement.dataset.theme = "dark"; } catch (e) {}</script>
     <title>Asset Generator</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <script src="{{ url_for('static', filename='theme.js') }}" defer></script>
     <script src="{{ url_for('static', filename='toolbar.js') }}" defer></script>
     <script src="{{ url_for('static', filename='generator.js') }}" defer></script>
   </head>
@@ -49,6 +51,10 @@
               <small>Export noch nicht verfügbar</small>
             </div>
           </div>
+          <button class="icon-button theme-toggle" id="theme-toggle" type="button" aria-label="Dark Mode aktivieren" title="Dark Mode aktivieren">
+            <span class="icon theme-icon-moon" aria-hidden="true" style="--icon-url: url('{{ url_for('static', filename='svg/moon.svg') }}')"></span>
+            <span class="icon theme-icon-sun" aria-hidden="true" style="--icon-url: url('{{ url_for('static', filename='svg/sun.svg') }}')"></span>
+          </button>
           <a class="icon-button" href="{{ url_for('settings') }}" aria-label="Einstellungen" title="Einstellungen">{{ icon('settings') }}<span>Einstellungen</span></a>
         </div>
       </nav>
