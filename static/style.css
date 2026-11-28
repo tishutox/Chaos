@@ -232,12 +232,18 @@ h1 { margin: 0; font-size: 25px; letter-spacing: -.025em; }
   line-height: 1.6;
 }
 textarea { resize: vertical; }
-#asset-prompt { resize: both; }
-#asset-prompt::-webkit-resizer {
-  background: url("/static/svg/handle-bottom-right.svg") no-repeat center / 14px 14px;
-  border: 0;
+.textarea-wrap { position: relative; }
+.textarea-wrap textarea { width: 100%; resize: both; }
+.textarea-wrap textarea::-webkit-resizer { display: none; }
+.resize-handle {
+  position: absolute;
+  right: 9px;
+  bottom: 9px;
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+  pointer-events: none;
 }
-[data-theme="dark"] #asset-prompt::-webkit-resizer { filter: invert(1); }
 textarea::placeholder, input::placeholder { color: var(--placeholder); opacity: 1; }
 .field-note { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
 #generator-form .field-note { margin: 10px 0 20px; }

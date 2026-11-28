@@ -75,8 +75,11 @@
             <p class="panel-description">Beschreibe, was du erstellen möchtest. Die Pipeline übernimmt den Rest.</p>
             <form id="generator-form">
               <label for="asset-prompt">Asset-Beschreibung</label>
-              <textarea id="asset-prompt" maxlength="2000" rows="6" required placeholder="Zum Beispiel: ein magisches Schwert mit blauer Klinge"></textarea>
-              <p class="field-note">Ollama optimiert deinen Prompt, ComfyUI erstellt das PNG.</p>
+              <div class="textarea-wrap">
+                <textarea id="asset-prompt" maxlength="2000" rows="6" required placeholder="Zum Beispiel: ein magisches Schwert mit blauer Klinge"></textarea>
+                <span class="icon resize-handle" aria-hidden="true" style="--icon-url: url('{{ url_for('static', filename='svg/handle-bottom-right.svg') }}')"></span>
+              </div>
+              <p class="field-note">Die Pipeline optimiert deinen Prompt und erstellt das Pixel-Art-PNG.</p>
               <button class="generate-button" type="submit">{{ icon('palette') }} Asset generieren <span aria-hidden="true">→</span></button>
               <p id="generator-status" role="status" aria-live="polite"></p>
             </form>
