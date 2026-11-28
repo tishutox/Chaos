@@ -67,6 +67,6 @@ Die komplette Pipeline läuft in der Cloud — kein lokaler Rechner nötig:
 - **Frontend** (Flask): als Render-Web-Service mit Startbefehl `gunicorn main:app --bind 0.0.0.0:$PORT`.
 - **Backend** (FastAPI): als zweiter Render-Web-Service mit Startbefehl `uvicorn backend:app --host 0.0.0.0 --port $PORT`.
 - **Umgebungsvariablen** auf dem Backend-Service setzen: `GEMINI_API_KEY`, `CLOUDFLARE_API_TOKEN`, `CLOUDFLARE_ACCOUNT_ID`, `IMAGE_API=cloudflare` und `UI_ORIGINS=https://<frontend-domain>`.
-- Im Frontend (Einstellungen) die Backend-URL auf `https://<backend-domain>` setzen; ohne Eintrag verwendet das Frontend `http://<hostname>:8000`.
+- **Frontend-Backend-Verdrahtung:** auf dem Frontend-Service die Variable `BACKEND_URL=https://<backend-domain>` setzen. Das Frontend verwendet dann automatisch diese URL (fallback: lokale Erkennung oder manuelle Einstellung im Browser).
 
 Damit ist die Generierung von jedem Gerät mit Internetzugang erreichbar. Lokale Dienste (Ollama/ComfyUI) werden nicht benötigt: die Prompt-Erweiterung läuft über Gemini und die Bild-Erzeugung über Cloudflare (mit Pollinations als Fallback bei Inhaltsfiltern).

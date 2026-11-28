@@ -1,6 +1,9 @@
 "use strict";
 
 function defaultBackendUrl() {
+  const meta = document.querySelector('meta[name="backend-url"]');
+  const configured = meta && meta.getAttribute("content");
+  if (configured) return configured;
   const host = window.location.hostname;
   const isLocal = host === "localhost" || host === "127.0.0.1" || /^(\d{1,3}\.){3}\d{1,3}$/.test(host);
   return isLocal ? `http://${host}:8000` : "http://localhost:8000";
