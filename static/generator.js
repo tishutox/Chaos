@@ -15,6 +15,44 @@ const preview = document.querySelector("#asset-preview");
 const download = document.querySelector("#download-asset");
 let previewUrl = null;
 
+const textareaWrap = document.querySelector(".textarea-wrap");
+const resizeHandle = textareaWrap?.querySelector(".resize-handle");
+const promptTextarea = textareaWrap?.querySelector("textarea");
+
+if (textareaWrap && resizeHandle && promptTextarea) {
+  let drag = null;
+
+  function endDrag() {
+    drag = null;
+    document.body.style.cursor = "";
+  }
+
+  resizeHandle.addEventListener("pointerdown", (event) => {
+    event.preventDefault();
+    drag = {
+      pointerId: event.pointerId,
+      startX: event.clientX,
+      startY: event.clientY,
+      width: textareaWrap.offsetWidth,
+      height: promptTextarea.offsetHeight,
+      maxWidth: textareaWrap.parentElement ? textareaWrap.parentElement.offsetWidth : Infinity,
+    };
+    resizeHandle.setPointerCapture(event.pointerId);
+    document.body.style.cursor = "nwse-resize";
+  });
+
+  resizeHandle.addEventListener("pointermove", (event) => {
+    if (!drag || event.pointerId !== drag.pointerId) return;
+    const width = Math.min(drag.maxWidth, Math.max(180, drag.width + (event.clientX - drag.startX)));
+    const height = Math.max(96, drag.height + (event.clientY - drag.startY));
+    textareaWrap.style.width = `${width}px`;
+    promptTextarea.style.height = `${height}px`;
+  });
+
+  resizeHandle.addEventListener("pointerup", endDrag);
+  resizeHandle.addEventListener("pointercancel", endDrag);
+}
+
 function saveAsset(blob, name) {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open("asset-generator", 1);
